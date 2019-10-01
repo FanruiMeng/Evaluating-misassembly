@@ -2,9 +2,22 @@
 Factors influencing and machine learning models predicting read coverage in a genome assembled using short reads
 
 > ## Step 01: Map genome sequencing reads to tomato genome.
-
-> ## Step 02: Determine the optimal bin size.
-
+bwa mem -R "@RG\tID:1\tSM:SRR404081\tLB:SRR404081\tPL:SRR404081\tPU:SRR404081" -t 8 Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa  Sly.1.trimmed.fastq Sly.2.trimmed.fastq> 01_SRR404081.sam
+java -jar $PICARD/ReorderSam.jar I=01_SRR404081.sam O=02_SRR404081_reorder.sam REFERENCE=Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa
+samtools view -bS 02_SRR404081_reorder.sam -o 03_SRR404081_reorder.bam
+java -jar $PICARD/SortSam.jar INPUT=03_SRR404081_reorder.bam OUTPUT=04_SRR404081_sorted.bam SORT_ORDER=coordinate
+> ## Step 02: Get the copy number variations with CNVnator and determine the optimal bin size.
+1. Get the copy number variations with CNVnator
+cnvnator -genome Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa -root Sly.root -tree 04_SRR404081_dedup.bam -unique
+cnvnator -genome Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa -root Sly.root -his 100 -d genome/
+cnvnator -genome Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa -root Sly.root -stat 100
+cnvnator -genome Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa -root Sly.root -partition 100
+cnvnator -genome Solanum_lycopersicum_GCF_000188115.3_SL2.50_genomic.fa -root Sly.root -call 100 > Sly.cnv
+2. Determine the optimal bin size(From the CNVnator paper: given the same data quality and read length, we observed that the optimal bin size, and thus breakpoint resolution accuracy, scales roughly inversely with the coverage, resulting in ~100-bp bins for 20–30X coverage; ~500-bp bins for 4–6X coverage, and ~30-bp bins for ~100X coverage.)
+cnvnator -root my.root -his 100 -d genome/
+cnvnator -root my.root -eval 100
+3. Determine the read depth (RD) in each bin region.
+awk '{print $2}END{print "exit"}' Sly.cnv | cnvnator -root Sly.root -genotype 100
 > ## Step 03: Determine the read depth (RD) in each bin region.
 
 > ## Step 04: HC/LC designation
